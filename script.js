@@ -5,6 +5,14 @@ const { Client } = require("@notionhq/client");
 const markdownIt = require("markdown-it");
 const { extname } = require("node:path");
 
+const annotationMap = { strong: "bold", em: "italic", s: "strikethrough" };
+md = new markdownIt();
+
+const exitErr = (msg) => {
+  console.error(msg);
+  process.exit(1);
+};
+
 function parseJSONFile (path) {
   try {
     let data = readFileSync(path, "utf8");
@@ -74,15 +82,6 @@ function createToggleBlock(ques, ans, hasMarkdown=false) {
   };
 }
 
-const exitErr = (msg) => {
-  console.error(msg);
-  process.exit(1);
-}
-
-if (process.argv.length < 3) {
-  exitErr("usage: node script.js FILE [-p PAGE_ID] [-k NOTION_KEY] [-m] [-h]");
-}
-
 const options = {
   notionKey: {
     type: "string",
@@ -94,9 +93,13 @@ const options = {
   },
   help: {
     type: "boolean",
-    short: "h"
-  }
+    short: "h",
+  },
 };
+
+if (process.argv.length < 3) {
+  exitErr("usage: node script.js FILE [-p PAGE_ID] [-k NOTION_KEY] [-h]");
+}
 
 let values;
 try {
@@ -129,12 +132,10 @@ if (pageId.length !== 32) exitErr("Error: Invalid page ID");
 
 const notion = new Client({ auth: notionKey });
 const data = parseJSONFile(file);
-
-const annotationMap = {"strong": "bold", "em": "italic", "s": "strikethrough"}
-md = new markdownIt()
 const toggles = data.map((e) => {
   return createToggleBlock(e.q, e.a, e.m)
 })
+
 addToggle(notion, pageId, toggles)
   .then(() => console.log(`Successful: https://www.notion.so/${pageId}`))
   .catch((err) => exitErr(err.message));
